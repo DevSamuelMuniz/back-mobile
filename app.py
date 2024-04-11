@@ -28,6 +28,28 @@ def register_user():
 
     return jsonify({'message': 'User registered successfully'}), 201
 
+@app.route('/api/login', methods=['POST'])
+def login_user():
+    data = request.json
+    email = data['email']
+    password = data['password']
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM User WHERE email = ?", (email,))
+    user = cursor.fetchone()
+
+    if user:
+        # Verifica se a senha está correta
+        hashed_password = hash_password(password)
+        if user[3] == hashed_password:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False}), 401  # Unauthorized
+    else:
+        return jsonify({'success': False}), 404  # Not found
+
+
 # Rota para listar todos os usuários
 @app.route('/api/users', methods=['GET'])
 def get_users():
