@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Ler variáveis de ambiente
-DATABASE_URL = os.environ.get('DATABASE_URL')
+DATABASE_URL = os.environ.get('nutrilife.db')
 CHAVE = os.environ.get('CHAVE')
 
 # Função para calcular o hash da senha
