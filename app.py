@@ -1,10 +1,15 @@
+import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from database import get_db, close_db
 import hashlib
+import sqlite3
 
 app = Flask(__name__)
-CORS(app) 
+CORS(app)
+
+# Ler variáveis de ambiente
+DATABASE_URL = os.environ.get('DATABASE_URL')
+CHAVE = os.environ.get('CHAVE')
 
 # Função para calcular o hash da senha
 def hash_password(password):
@@ -20,11 +25,12 @@ def register_user():
 
     hashed_password = hash_password(password)
 
-    db = get_db()
-    cursor = db.cursor()
+    # Conectar ao banco de dados
+    conn = sqlite3.connect(DATABASE_URL)
+    cursor = conn.cursor()
     cursor.execute("INSERT INTO User (name, email, password) VALUES (?, ?, ?)", (name, email, hashed_password))
-    db.commit()
-    close_db()
+    conn.commit()
+    conn.close()
 
     return jsonify({'message': 'User registered successfully'}), 201
 
@@ -34,10 +40,12 @@ def login_user():
     email = data['email']
     password = data['password']
 
-    db = get_db()
-    cursor = db.cursor()
+    # Conectar ao banco de dados
+    conn = sqlite3.connect(DATABASE_URL)
+    cursor = conn.cursor()
     cursor.execute("SELECT * FROM User WHERE email = ?", (email,))
     user = cursor.fetchone()
+    conn.close()
 
     if user:
         # Verifica se a senha está correta
@@ -49,12 +57,12 @@ def login_user():
     else:
         return jsonify({'success': False}), 404  # Not found
 
-
 # Rota para listar todos os usuários
 @app.route('/api/users', methods=['GET'])
 def get_users():
-    db = get_db()
-    cursor = db.cursor()
+    # Conectar ao banco de dados
+    conn = sqlite3.connect(DATABASE_URL)
+    cursor = conn.cursor()
     cursor.execute("SELECT * FROM User")
     users = cursor.fetchall()
 
@@ -67,7 +75,7 @@ def get_users():
         }
         users_list.append(user_dict)
 
-    close_db()
+    conn.close()
     return jsonify(users_list), 200
 
 if __name__ == '__main__':
