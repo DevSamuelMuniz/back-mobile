@@ -1,15 +1,10 @@
-import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from database import get_db, close_db
 import hashlib
-import sqlite3
 
 app = Flask(__name__)
-CORS(app)
-
-# Ler variáveis de ambiente
-DATABASE_URL = os.environ.get('nutrilife.db')
-CHAVE = os.environ.get('CHAVE')
+CORS(app) 
 
 # Função para calcular o hash da senha
 def hash_password(password):
@@ -25,12 +20,12 @@ def register_user():
 
     hashed_password = hash_password(password)
 
-    # Conectar ao banco de dados
-    conn = sqlite3.connect(DATABASE_URL)
-    cursor = conn.cursor()
+
+    db = get_db()
+    cursor = db.cursor()
     cursor.execute("INSERT INTO User (name, email, password) VALUES (?, ?, ?)", (name, email, hashed_password))
-    conn.commit()
-    conn.close()
+    db.commit()
+    close_db()
 
     return jsonify({'message': 'User registered successfully'}), 201
 
@@ -40,12 +35,10 @@ def login_user():
     email = data['email']
     password = data['password']
 
-    # Conectar ao banco de dados
-    conn = sqlite3.connect(DATABASE_URL)
-    cursor = conn.cursor()
+    db = get_db()
+    cursor = db.cursor()
     cursor.execute("SELECT * FROM User WHERE email = ?", (email,))
     user = cursor.fetchone()
-    conn.close()
 
     if user:
         # Verifica se a senha está correta
@@ -57,12 +50,12 @@ def login_user():
     else:
         return jsonify({'success': False}), 404  # Not found
 
+
 # Rota para listar todos os usuários
 @app.route('/api/users', methods=['GET'])
 def get_users():
-    # Conectar ao banco de dados
-    conn = sqlite3.connect(DATABASE_URL)
-    cursor = conn.cursor()
+    db = get_db()
+    cursor = db.cursor()
     cursor.execute("SELECT * FROM User")
     users = cursor.fetchall()
 
@@ -75,7 +68,7 @@ def get_users():
         }
         users_list.append(user_dict)
 
-    conn.close()
+    close_db()
     return jsonify(users_list), 200
 
 if __name__ == '__main__':

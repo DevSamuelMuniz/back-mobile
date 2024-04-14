@@ -27,6 +27,14 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS Post (
                     FOREIGN KEY (userId) REFERENCES User(userId)
                 )''')
 
+cursor.execute('''CREATE TABLE IF NOT EXISTS Meta (
+                    metaId INTEGER PRIMARY KEY,
+                    userId INTEGER,
+                    metaNome TEXT,
+                    quantMeta INTEGER,
+                    FOREIGN KEY (userId) REFERENCES User(userId)
+                )''')
+
 def insert_user(name, email, password):
     hashed_password = hash_password(password)
     cursor.execute("INSERT INTO User (name, email, password) VALUES (?, ?, ?)", (name, email, hashed_password))
