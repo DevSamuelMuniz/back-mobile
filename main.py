@@ -32,6 +32,7 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS Meta (
                     userId INTEGER,
                     metaNome TEXT,
                     quantMeta INTEGER,
+                    atualMeta INTEGER,
                     FOREIGN KEY (userId) REFERENCES User(userId)
                 )''')
 
