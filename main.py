@@ -23,7 +23,7 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS Post (
                     title TEXT,
                     description TEXT,
                     pic BLOB,
-                    time TIMESTAMP,
+                    time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (userId) REFERENCES User(userId)
                 )''')
 

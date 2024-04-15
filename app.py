@@ -92,6 +92,19 @@ def logout():
     logout_user()
     return jsonify({'message': 'Logged out successfully'}), 200
 
+@app.route('/api/user_name/<int:user_id>', methods=['GET'])
+def get_user_name(user_id):
+    db = get_db()  # Conecta ao banco de dados
+    cursor = db.cursor()  # Cria um cursor para executar consultas SQL
+
+    cursor.execute("SELECT name FROM User WHERE userId = ?", (user_id,))
+    user_name = cursor.fetchone()[0]  # Obtém o nome do usuário
+
+    db.close()  # Fecha a conexão com o banco de dados
+
+    return jsonify({'userName': user_name}), 200
+
+
 # Rota para listar todos os usuários
 @app.route('/api/users', methods=['GET'])
 def get_users():
@@ -139,34 +152,57 @@ def add_goal():
         return jsonify({'message': 'User does not exist'}), 404
 
 
-@app.route('/api/post', methods=['POST'])
+@app.route('/api/post', methods=['GET', 'POST'])
 def post():
-    data = request.json
-    user_id = data['userId']
-    title = data['title']
-    description = data['description']
-    encoded_pic = data['pic']  # Imagem codificada em base64
+    if request.method == 'POST':
+        data = request.json
+        user_id = data['userId']
+        title = data['title']
+        description = data['description']
+        encoded_pic = data['pic']  # Imagem codificada em base64
 
-    # Decodifica a imagem base64
-    decoded_pic = base64.b64decode(encoded_pic)
+        # Decodifica a imagem base64
+        decoded_pic = base64.b64decode(encoded_pic)
 
-    db = get_db()
-    cursor = db.cursor()
+        db = get_db()
+        cursor = db.cursor()
 
-    # Verifica se o usuário existe no banco de dados
-    cursor.execute("SELECT * FROM User WHERE userId = ?", (user_id,))
-    user = cursor.fetchone()
+        # Verifica se o usuário existe no banco de dados
+        cursor.execute("SELECT * FROM User WHERE userId = ?", (user_id,))
+        user = cursor.fetchone()
 
-    if user:
-        # Se o usuário existir, insere os dados da postagem na tabela Post
-        cursor.execute("INSERT INTO Post (userId, title, description, pic) VALUES (?, ?, ?, ?)",
-                       (user_id, title, description, decoded_pic))
-        db.commit()
+        if user:
+            # Se o usuário existir, insere os dados da postagem na tabela Post
+            cursor.execute("INSERT INTO Post (userId, title, description, pic) VALUES (?, ?, ?, ?)",
+                           (user_id, title, description, decoded_pic))
+            db.commit()
+            close_db()
+            return jsonify({'message': 'Post saved successfully'}), 201
+        else:
+            # Se o usuário não existir, retorna uma mensagem de erro
+            return jsonify({'message': 'User does not exist'}), 404
+
+    elif request.method == 'GET':
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute("SELECT * FROM Post")
+        posts = cursor.fetchall()
+
+        posts_list = []
+        for post in posts:
+            post_dict = {
+                'postId': post[0],
+                'userId': post[1],
+                'title': post[2],
+                'description': post[3]
+                # Adicione outros campos conforme necessário
+            }
+            posts_list.append(post_dict)
+
         close_db()
-        return jsonify({'message': 'Post saved successfully'}), 201
-    else:
-        # Se o usuário não existir, retorna uma mensagem de erro
-        return jsonify({'message': 'User does not exist'}), 404
+        return jsonify(posts_list), 200
+
+
 
 
 if __name__ == '__main__':
