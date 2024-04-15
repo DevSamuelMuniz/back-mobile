@@ -106,17 +106,18 @@ def get_users():
 @app.route('/api/add_goal', methods=['POST'])
 def add_goal():
     data = request.json
-    user_id = current_user.id  
+    user_id = data['userId']  # Obtenha o ID do usuário do payload da requisição
     meta_name = data['metaName']
     meta_quantity = data['metaQuantity']
 
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("INSERT INTO Meta (userId, metaName, metaQuantity, atualMeta) VALUES (?, ?, ?, 0)", (user_id, meta_name, meta_quantity))
+    cursor.execute("INSERT INTO Meta (userId, metaNome, quantMeta, atualMeta) VALUES (?, ?, ?, 0)", (user_id, meta_name, meta_quantity))
     db.commit()
     close_db()
 
     return jsonify({'message': 'Goal added successfully'}), 201
+
 
 
 if __name__ == '__main__':
