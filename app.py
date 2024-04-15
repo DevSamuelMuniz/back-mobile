@@ -1,10 +1,39 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from database import get_db, close_db
+from flask_login import LoginManager, current_user, logout_user, UserMixin
 import hashlib
+import sqlite3  # Importe o módulo sqlite3
 
 app = Flask(__name__)
-CORS(app) 
+CORS(app)
+login_manager = LoginManager(app)
+
+# Defina a classe User para representar um usuário
+class User(UserMixin):
+    def __init__(self, user_id):
+        self.id = user_id
+
+# Função para buscar um usuário no banco de dados com base no ID
+def get_user_by_id(user_id):
+    conn = sqlite3.connect('nutrilife.db')
+    cursor = conn.cursor()
+
+    # Execute a consulta SQL para buscar o usuário pelo ID
+    cursor.execute("SELECT * FROM User WHERE userId = ?", (user_id,))
+    user_data = cursor.fetchone()
+
+    conn.close()
+
+    if user_data:
+        return User(user_data[0])  # Retorna um objeto User com base no ID
+    else:
+        return None  # Retorna None se o usuário não for encontrado
+
+# Modifique a função load_user para usar a função get_user_by_id
+@login_manager.user_loader
+def load_user(user_id):
+    return get_user_by_id(user_id)
 
 # Função para calcular o hash da senha
 def hash_password(password):
@@ -19,7 +48,6 @@ def register_user():
     password = data['password']
 
     hashed_password = hash_password(password)
-
 
     db = get_db()
     cursor = db.cursor()
@@ -50,6 +78,10 @@ def login_user():
     else:
         return jsonify({'success': False}), 404  # Not found
 
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    logout_user()
+    return jsonify({'message': 'Logged out successfully'}), 200
 
 # Rota para listar todos os usuários
 @app.route('/api/users', methods=['GET'])
@@ -71,5 +103,22 @@ def get_users():
     close_db()
     return jsonify(users_list), 200
 
+@app.route('/api/add_goal', methods=['POST'])
+def add_goal():
+    data = request.json
+    user_id = current_user.id  
+    meta_name = data['metaName']
+    meta_quantity = data['metaQuantity']
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("INSERT INTO Meta (userId, metaName, metaQuantity, atualMeta) VALUES (?, ?, ?, 0)", (user_id, meta_name, meta_quantity))
+    db.commit()
+    close_db()
+
+    return jsonify({'message': 'Goal added successfully'}), 201
+
+
 if __name__ == '__main__':
+    login_manager.init_app(app)  # Inicialize o Flask-Login
     app.run(debug=True)

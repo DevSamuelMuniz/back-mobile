@@ -41,9 +41,6 @@ def insert_user(name, email, password):
     cursor.execute("INSERT INTO User (name, email, password) VALUES (?, ?, ?)", (name, email, hashed_password))
     conn.commit()
 
-# Example of inserting a user
-insert_user("Samuel Muniz", "samuel@gmail.com", "123456")
-
 # Commit changes and close connection
 conn.close()
 
