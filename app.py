@@ -81,7 +81,7 @@ def login_user():
         # Verifica se a senha está correta
         hashed_password = hash_password(password)
         if user[3] == hashed_password:
-            return jsonify({'success': True}), 200
+            return jsonify({'success': True, "token":user[0]}), 200
         else:
             return jsonify({'success': False}), 401  # Unauthorized
     else:
@@ -126,7 +126,7 @@ def get_users():
     return jsonify(users_list), 200
 
 
-@app.route('/api/add_goal', methods=['POST'])
+@app.route('/api/add_goal', methods=['POST', 'GET'])
 def add_goal():
     data = request.json
     user_id = data['userId']  
@@ -140,16 +140,29 @@ def add_goal():
     cursor.execute("SELECT * FROM User WHERE userId = ?", (user_id,))
     user = cursor.fetchone()
 
-    if user:
-        # Se o usuário existir, insere os dados da meta na tabela Meta
-        cursor.execute("INSERT INTO Meta (userId, metaNome, quantMeta, atualMeta) VALUES (?, ?, ?, ?)",
-                       (user_id, meta_name, meta_quantity, 0))  # Inicializa atualMeta como 0
-        db.commit()
-        close_db()
-        return jsonify({'userId': user_id, 'message': 'Goal added successfully'}), 201
+    if request.method == 'POST':
+        if user:
+            # Se o usuário existir, insere os dados da meta na tabela Meta
+            cursor.execute("INSERT INTO Meta (userId, metaNome, quantMeta, atualMeta) VALUES (?, ?, ?, ?)",
+                        (user_id, meta_name, meta_quantity, 0))  # Inicializa atualMeta como 0
+            db.commit()
+            close_db()
+            return jsonify({'userId': user_id, 'message': 'Goal added successfully'}), 201
+        else:
+            # Se o usuário não existir, retorna uma mensagem de erro
+            return jsonify({'message': 'User does not exist'}), 
+
+    elif request.method == 'GET':
+        userId = request.headers["token"]
+
+        if user:
+            cursor.execute(f"SELECT * FROM meta WHERE userId LIKE {userId}")
+            meta = cursor.fetchall()
+
+            return jsonify(meta), 200
     else:
-        # Se o usuário não existir, retorna uma mensagem de erro
-        return jsonify({'message': 'User does not exist'}), 404
+        return jsonify({'message': 'unauthorized'}), 401
+
 
 
 @app.route('/api/post', methods=['GET', 'POST'])
@@ -161,31 +174,28 @@ def post():
         description = data['description']
         encoded_pic = data['pic']  # Imagem codificada em base64
 
-        # Decodifica a imagem base64
         decoded_pic = base64.b64decode(encoded_pic)
 
         db = get_db()
         cursor = db.cursor()
 
-        # Verifica se o usuário existe no banco de dados
         cursor.execute("SELECT * FROM User WHERE userId = ?", (user_id,))
         user = cursor.fetchone()
 
         if user:
-            # Se o usuário existir, insere os dados da postagem na tabela Post
             cursor.execute("INSERT INTO Post (userId, title, description, pic) VALUES (?, ?, ?, ?)",
                            (user_id, title, description, decoded_pic))
             db.commit()
             close_db()
             return jsonify({'message': 'Post saved successfully'}), 201
         else:
-            # Se o usuário não existir, retorna uma mensagem de erro
             return jsonify({'message': 'User does not exist'}), 404
 
     elif request.method == 'GET':
+        userId = request.headers["token"]
         db = get_db()
         cursor = db.cursor()
-        cursor.execute("SELECT * FROM Post")
+        cursor.execute(f"SELECT * FROM Post WHERE userId LIKE {userId}")
         posts = cursor.fetchall()
 
         posts_list = []
@@ -195,7 +205,6 @@ def post():
                 'userId': post[1],
                 'title': post[2],
                 'description': post[3]
-                # Adicione outros campos conforme necessário
             }
             posts_list.append(post_dict)
 
