@@ -126,40 +126,63 @@ def get_users():
     return jsonify(users_list), 200
 
 
-@app.route('/api/add_goal', methods=['POST', 'GET'])
+@app.route('/api/add_goal', methods=['POST', 'GET' , 'PUT'])
 def add_goal():
-    data = request.json
-    user_id = data['userId']  
-    meta_name = data['metaName']
-    meta_quantity = data['metaQuantity']
-
-    db = get_db()
-    cursor = db.cursor()
-
-    # Verifica se o usuário existe no banco de dados
-    cursor.execute("SELECT * FROM User WHERE userId = ?", (user_id,))
-    user = cursor.fetchone()
-
     if request.method == 'POST':
+        data = request.json
+        user_id = data['userId']  
+        meta_name = data['metaName']
+        meta_quantity = data['metaQuantity']
+
+        db = get_db()
+        cursor = db.cursor()
+
+        cursor.execute("SELECT * FROM User WHERE userId = ?", (user_id,))
+        user = cursor.fetchone()
+
         if user:
-            # Se o usuário existir, insere os dados da meta na tabela Meta
             cursor.execute("INSERT INTO Meta (userId, metaNome, quantMeta, atualMeta) VALUES (?, ?, ?, ?)",
-                        (user_id, meta_name, meta_quantity, 0))  # Inicializa atualMeta como 0
+                        (user_id, meta_name, meta_quantity, 0)) 
             db.commit()
             close_db()
             return jsonify({'userId': user_id, 'message': 'Goal added successfully'}), 201
         else:
-            # Se o usuário não existir, retorna uma mensagem de erro
             return jsonify({'message': 'User does not exist'}), 
 
     elif request.method == 'GET':
+        db = get_db()
+        cursor = db.cursor()
+
         userId = request.headers["token"]
+        cursor.execute("SELECT * FROM User WHERE userId = ?", (userId,))
+        user = cursor.fetchone()
 
         if user:
             cursor.execute(f"SELECT * FROM meta WHERE userId LIKE {userId}")
-            meta = cursor.fetchall()
+            metas = cursor.fetchall()
+            resp = list()
+            for meta in metas:
+                resp.append(
+                    {
+                        "id": meta[0],
+                        "nome": meta[2],
+                        "quantidade": meta[3],
+                        "metaAtual": meta[4]
+                    }
+                )
 
-            return jsonify(meta), 200
+            return jsonify(resp), 200
+        
+    elif request.method == 'PUT':
+        data = request.json
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute(f'UPDATE meta SET atualMeta = {data["metaAtual"]} WHERE metaId = {request.headers["metaId"]}')
+
+        return "", 200
+
+    
+
     else:
         return jsonify({'message': 'unauthorized'}), 401
 
