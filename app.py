@@ -199,11 +199,10 @@ def post():
             user_id = data.get('userId')
             title = data.get('title')
             description = data.get('description')
-            encoded_pic = data.get('pic')  # Imagem codificada em base64
+            encoded_pic = data.get('pic') # Imagem codificada em base64
 
             if not all([user_id, title, description, encoded_pic]):
                 return jsonify({'message': 'Campos obrigatórios ausentes'}), 400
-
             decoded_pic = base64.b64decode(encoded_pic)  # Decodifica a imagem base64 para obter os bytes da imagem
 
             db = get_db()
@@ -216,7 +215,6 @@ def post():
                 cursor.execute("INSERT INTO Post (userId, title, description, pic) VALUES (?, ?, ?, ?)",
                             (user_id, title, description, decoded_pic))
                 db.commit()
-                close_db()
                 return jsonify({'message': 'Post saved successfully'}), 201
             else:
                 return jsonify({'message': 'Usuário não encontrado'}), 404
@@ -233,7 +231,7 @@ def post():
 
             db = get_db()
             cursor = db.cursor()
-            cursor.execute("SELECT * FROM post WHERE userId = ?", (userId,))
+            cursor.execute("SELECT * FROM Post WHERE userId = ?", (userId,))
             posts = cursor.fetchall()
 
             posts_list = []
@@ -249,12 +247,9 @@ def post():
                 }
                 posts_list.append(post_dict)
 
-            close_db()
             return jsonify(posts_list), 200
         except Exception as e:
             return jsonify({'message': str(e)}), 500
-
-
 
 
 
