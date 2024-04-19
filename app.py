@@ -7,6 +7,8 @@ import hashlib
 import sqlite3  # Importe o módulo sqlite3
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  
+
 CORS(app)
 login_manager = LoginManager(app)
 
@@ -192,48 +194,66 @@ def add_goal():
 @app.route('/api/post', methods=['GET', 'POST'])
 def post():
     if request.method == 'POST':
-        data = request.json
-        user_id = data['userId']
-        title = data['title']
-        description = data['description']
-        encoded_pic = data['pic']  # Imagem codificada em base64
+        try:
+            data = request.json
+            user_id = data.get('userId')
+            title = data.get('title')
+            description = data.get('description')
+            encoded_pic = data.get('pic')  # Imagem codificada em base64
 
-        decoded_pic = base64.b64decode(encoded_pic)
+            if not all([user_id, title, description, encoded_pic]):
+                return jsonify({'message': 'Campos obrigatórios ausentes'}), 400
 
-        db = get_db()
-        cursor = db.cursor()
+            decoded_pic = base64.b64decode(encoded_pic)  # Decodifica a imagem base64 para obter os bytes da imagem
 
-        cursor.execute("SELECT * FROM User WHERE userId = ?", (user_id,))
-        user = cursor.fetchone()
+            db = get_db()
+            cursor = db.cursor()
 
-        if user:
-            cursor.execute("INSERT INTO Post (userId, title, description, pic) VALUES (?, ?, ?, ?)",
-                           (user_id, title, description, decoded_pic))
-            db.commit()
-            close_db()
-            return jsonify({'message': 'Post saved successfully'}), 201
-        else:
-            return jsonify({'message': 'User does not exist'}), 404
+            cursor.execute("SELECT * FROM User WHERE userId = ?", (user_id,))
+            user = cursor.fetchone()
+
+            if user:
+                cursor.execute("INSERT INTO Post (userId, title, description, pic) VALUES (?, ?, ?, ?)",
+                            (user_id, title, description, decoded_pic))
+                db.commit()
+                close_db()
+                return jsonify({'message': 'Post saved successfully'}), 201
+            else:
+                return jsonify({'message': 'Usuário não encontrado'}), 404
+        except Exception as e:
+            return jsonify({'message': str(e)}), 500
+
 
     elif request.method == 'GET':
-        userId = request.headers["token"]
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute(f"SELECT * FROM Post WHERE userId LIKE {userId}")
-        posts = cursor.fetchall()
+        try:
+            userId = request.headers["token"]
 
-        posts_list = []
-        for post in posts:
-            post_dict = {
-                'postId': post[0],
-                'userId': post[1],
-                'title': post[2],
-                'description': post[3]
-            }
-            posts_list.append(post_dict)
+            if not userId:
+                return jsonify({'message': 'Token de usuário ausente'}), 400
 
-        close_db()
-        return jsonify(posts_list), 200
+            db = get_db()
+            cursor = db.cursor()
+            cursor.execute("SELECT * FROM post WHERE userId = ?", (userId,))
+            posts = cursor.fetchall()
+
+            posts_list = []
+            for post in posts:
+                encoded_pic = base64.b64encode(post[4]).decode('utf-8')
+
+                post_dict = {
+                    'postId': post[0],
+                    'userId': post[1],
+                    'title': post[2],
+                    'description': post[3],
+                    'pic': encoded_pic
+                }
+                posts_list.append(post_dict)
+
+            close_db()
+            return jsonify(posts_list), 200
+        except Exception as e:
+            return jsonify({'message': str(e)}), 500
+
 
 
 
