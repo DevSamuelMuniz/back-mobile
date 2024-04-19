@@ -92,6 +92,7 @@ def logout():
     logout_user()
     return jsonify({'message': 'Logged out successfully'}), 200
 
+
 @app.route('/api/user_name/<int:user_id>', methods=['GET'])
 def get_user_name(user_id):
     db = get_db()  # Conecta ao banco de dados
@@ -238,5 +239,5 @@ def post():
 
 
 if __name__ == '__main__':
-    login_manager.init_app(app)  # Inicialize o Flask-Login
+    login_manager.init_app(app)  
     app.run(debug=True)
